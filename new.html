@@ -1,0 +1,2236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Groundwater Level Finder</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        :root {
+            --bg-primary: #f0f4f8;
+            --bg-secondary: #ffffff;
+            --bg-card: #ffffff;
+            --bg-hover: #f7f9fc;
+            --bg-input: #f0f4f8;
+            --text-primary: #1a2332;
+            --text-secondary: #5a6a7e;
+            --text-muted: #8c9bb0;
+            --border: #e2e8f0;
+            --border-light: #edf2f7;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.08);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.1);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+            --shadow-xl: 0 16px 48px rgba(0,0,0,0.15);
+            --blue-50: #eff6ff; --blue-100: #dbeafe;
+            --blue-400: #60a5fa; --blue-500: #3b82f6;
+            --blue-600: #2563eb; --blue-700: #1d4ed8;
+            --green-50: #f0fdf4; --green-400: #4ade80;
+            --green-500: #22c55e; --green-600: #16a34a;
+            --red-50: #fef2f2; --red-400: #f87171;
+            --red-500: #ef4444; --red-600: #dc2626;
+            --yellow-50: #fffbeb; --yellow-400: #facc15;
+            --yellow-500: #eab308;
+            --orange-500: #f97316;
+            --purple-500: #8b5cf6;
+            --cyan-500: #06b6d4;
+            --radius: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --transition: 0.3s ease;
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0f172a;
+            --bg-secondary: #1e293b;
+            --bg-card: #1e293b;
+            --bg-hover: #273548;
+            --bg-input: #273548;
+            --text-primary: #f1f5f9;
+            --text-secondary: #94a3b8;
+            --text-muted: #64748b;
+            --border: #334155;
+            --border-light: #293548;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+            --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+            --shadow-xl: 0 16px 48px rgba(0,0,0,0.6);
+        }
+
+        *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+        body {
+            font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            transition: background var(--transition), color var(--transition);
+        }
+
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
+
+        /* ====== HEADER ====== */
+        .top-header {
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0 32px;
+            height: 68px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            backdrop-filter: blur(12px);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-logo {
+            width: 42px; height: 42px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 20px;
+        }
+
+        .brand h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .brand span {
+            font-size: 12px;
+            color: var(--text-muted);
+            display: block;
+            margin-top: -2px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .icon-btn {
+            width: 40px; height: 40px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.2s;
+        }
+
+        .icon-btn:hover {
+            background: var(--bg-hover);
+            color: var(--blue-500);
+            border-color: var(--blue-400);
+        }
+
+        /* ====== SEARCH SECTION ====== */
+        .search-section {
+            background: linear-gradient(135deg, #1e3a5f, #0f2744);
+            padding: 48px 32px;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .search-section::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 30% 50%, rgba(59,130,246,0.15) 0%, transparent 50%),
+                        radial-gradient(circle at 70% 80%, rgba(6,182,212,0.1) 0%, transparent 40%);
+            animation: bgMove 20s ease infinite;
+        }
+
+        @keyframes bgMove {
+            0%, 100% { transform: translate(0, 0); }
+            50% { transform: translate(-2%, -1%); }
+        }
+
+        .search-section h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+            margin-bottom: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .search-section p {
+            font-size: 15px;
+            color: rgba(255,255,255,0.6);
+            margin-bottom: 28px;
+            position: relative;
+            z-index: 1;
+        }
+
+        .search-wrapper {
+            max-width: 640px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 10;
+        }
+
+        .search-box {
+            display: flex;
+            background: white;
+            border-radius: 14px;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.25);
+        }
+
+        .search-input-wrap {
+            flex: 1;
+            position: relative;
+        }
+
+        .search-input-wrap i {
+            position: absolute;
+            left: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #8c9bb0;
+            font-size: 18px;
+            z-index: 2;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 18px 18px 18px 50px;
+            border: none;
+            font-size: 16px;
+            color: #1a2332;
+            background: transparent;
+            outline: none;
+        }
+
+        .search-input::placeholder {
+            color: #a0aec0;
+        }
+
+        .search-btn {
+            padding: 18px 32px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .search-btn:hover {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+        }
+
+        .search-btn:disabled {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+
+        /* ====== SUGGESTIONS ====== */
+        .suggestions {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+            max-height: 320px;
+            overflow-y: auto;
+            display: none;
+            z-index: 100;
+        }
+
+        .suggestions.show { display: block; }
+
+        .suggestion-item {
+            padding: 14px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.15s;
+            border-bottom: 1px solid #f0f4f8;
+        }
+
+        .suggestion-item:last-child { border-bottom: none; }
+
+        .suggestion-item:hover {
+            background: #f0f4f8;
+        }
+
+        .suggestion-item i {
+            color: #3b82f6;
+            font-size: 16px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .suggestion-text {
+            flex: 1;
+        }
+
+        .suggestion-text .name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a2332;
+        }
+
+        .suggestion-text .detail {
+            font-size: 12px;
+            color: #8c9bb0;
+        }
+
+        .suggestion-type {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 6px;
+            background: #eff6ff;
+            color: #3b82f6;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        /* ====== RECENT SEARCHES ====== */
+        .recent-searches {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 18px;
+            flex-wrap: wrap;
+            position: relative;
+            z-index: 1;
+        }
+
+        .recent-searches span {
+            font-size: 13px;
+            color: rgba(255,255,255,0.5);
+        }
+
+        .recent-tag {
+            padding: 6px 14px;
+            background: rgba(255,255,255,0.12);
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 20px;
+            color: rgba(255,255,255,0.8);
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .recent-tag:hover {
+            background: rgba(255,255,255,0.2);
+            color: white;
+        }
+
+        /* ====== LOADING ====== */
+        .loading-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(15,23,42,0.6);
+            backdrop-filter: blur(4px);
+            z-index: 9999;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .loading-overlay.show {
+            display: flex;
+        }
+
+        .loading-card {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            padding: 40px 48px;
+            text-align: center;
+            box-shadow: var(--shadow-xl);
+        }
+
+        .spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--blue-500);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-card h3 {
+            font-size: 16px;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .loading-card p {
+            font-size: 13px;
+            color: var(--text-muted);
+        }
+
+        /* ====== RESULTS SECTION ====== */
+        .results-section {
+            padding: 28px 32px;
+            display: none;
+        }
+
+        .results-section.show { display: block; }
+
+        /* Location Header */
+        .location-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .location-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .location-pin {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 22px;
+        }
+
+        .location-details h2 {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .location-details .coords {
+            font-size: 13px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 2px;
+        }
+
+        .location-details .coords i {
+            font-size: 11px;
+        }
+
+        .location-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            padding: 9px 18px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn:hover { border-color: var(--blue-400); color: var(--text-primary); }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover { opacity: 0.9; color: white; }
+
+        /* ====== WATER LEVEL HERO CARD ====== */
+        .water-hero {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-xl);
+            overflow: hidden;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-md);
+        }
+
+        .water-hero-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+        }
+
+        .water-hero-left {
+            padding: 36px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .water-level-label {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .water-level-display {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .water-level-value {
+            font-size: 56px;
+            font-weight: 800;
+            line-height: 1;
+        }
+
+        .water-level-unit {
+            font-size: 22px;
+            color: var(--text-muted);
+            font-weight: 500;
+        }
+
+        .water-level-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+
+        .status-safe {
+            background: var(--green-50);
+            color: var(--green-600);
+        }
+        .status-warning {
+            background: var(--yellow-50);
+            color: var(--yellow-500);
+        }
+        .status-critical {
+            background: var(--red-50);
+            color: var(--red-600);
+        }
+
+        [data-theme="dark"] .status-safe { background: rgba(34,197,94,0.15); }
+        [data-theme="dark"] .status-warning { background: rgba(234,179,8,0.15); }
+        [data-theme="dark"] .status-critical { background: rgba(239,68,68,0.15); }
+
+        .water-meta {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+        }
+
+        .water-meta-item {
+            background: var(--bg-primary);
+            border-radius: var(--radius);
+            padding: 14px;
+        }
+
+        .water-meta-item .meta-label {
+            font-size: 11px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .water-meta-item .meta-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .water-meta-item .meta-unit {
+            font-size: 12px;
+            color: var(--text-muted);
+            font-weight: 400;
+        }
+
+        .water-hero-right {
+            position: relative;
+            min-height: 320px;
+        }
+
+        .water-gauge-container {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-primary);
+        }
+
+        .gauge-visual {
+            position: relative;
+            width: 200px;
+            height: 260px;
+        }
+
+        .gauge-tube {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 240px;
+            border: 3px solid var(--border);
+            border-radius: 0 0 40px 40px;
+            overflow: hidden;
+            background: var(--bg-card);
+        }
+
+        .gauge-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            border-radius: 0 0 37px 37px;
+            transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .gauge-fill.safe {
+            background: linear-gradient(to top, #1d4ed8, #3b82f6, #60a5fa);
+        }
+        .gauge-fill.warning {
+            background: linear-gradient(to top, #d97706, #eab308, #facc15);
+        }
+        .gauge-fill.critical {
+            background: linear-gradient(to top, #b91c1c, #ef4444, #f87171);
+        }
+
+        .gauge-marks {
+            position: absolute;
+            top: 10px;
+            right: -40px;
+            height: 220px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .gauge-mark {
+            font-size: 10px;
+            color: var(--text-muted);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .gauge-mark::before {
+            content: '';
+            width: 8px;
+            height: 1px;
+            background: var(--border);
+        }
+
+        .gauge-surface {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 30px;
+            border-radius: 50%;
+            border: 2px solid var(--border);
+            background: var(--bg-card);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .gauge-surface i {
+            color: var(--green-500);
+            font-size: 14px;
+        }
+
+        .gauge-waves {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 20px;
+            overflow: hidden;
+        }
+
+        /* ====== STATS GRID ====== */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 20px;
+            transition: all 0.3s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .stat-card::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+        }
+
+        .stat-card.temp::after { background: linear-gradient(90deg, #f97316, #ef4444); }
+        .stat-card.rain::after { background: linear-gradient(90deg, #3b82f6, #8b5cf6); }
+        .stat-card.humidity::after { background: linear-gradient(90deg, #06b6d4, #22c55e); }
+        .stat-card.depth::after { background: linear-gradient(90deg, #8b5cf6, #ec4899); }
+
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        .stat-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 14px;
+        }
+
+        .stat-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 17px;
+        }
+
+        .stat-card.temp .stat-icon { background: rgba(249,115,22,0.1); color: var(--orange-500); }
+        .stat-card.rain .stat-icon { background: rgba(59,130,246,0.1); color: var(--blue-500); }
+        .stat-card.humidity .stat-icon { background: rgba(6,182,212,0.1); color: var(--cyan-500); }
+        .stat-card.depth .stat-icon { background: rgba(139,92,246,0.1); color: var(--purple-500); }
+
+        [data-theme="dark"] .stat-card.temp .stat-icon { background: rgba(249,115,22,0.15); }
+        [data-theme="dark"] .stat-card.rain .stat-icon { background: rgba(59,130,246,0.15); }
+        [data-theme="dark"] .stat-card.humidity .stat-icon { background: rgba(6,182,212,0.15); }
+        [data-theme="dark"] .stat-card.depth .stat-icon { background: rgba(139,92,246,0.15); }
+
+        .stat-trend {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 6px;
+        }
+
+        .stat-trend.up { background: var(--green-50); color: var(--green-600); }
+        .stat-trend.down { background: var(--red-50); color: var(--red-600); }
+        [data-theme="dark"] .stat-trend.up { background: rgba(34,197,94,0.15); }
+        [data-theme="dark"] .stat-trend.down { background: rgba(239,68,68,0.15); }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: 800;
+            color: var(--text-primary);
+            line-height: 1.1;
+        }
+
+        .stat-value span {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        /* ====== GRID LAYOUTS ====== */
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .grid-2-1 {
+            display: grid;
+            grid-template-columns: 3fr 2fr;
+            gap: 20px;
+            margin-bottom: 24px;
+        }
+
+        .grid-full {
+            margin-bottom: 24px;
+        }
+
+        /* ====== CARDS ====== */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            transition: box-shadow 0.3s;
+        }
+
+        .card:hover { box-shadow: var(--shadow-md); }
+
+        .card-header {
+            padding: 18px 22px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .card-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title-icon {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .card-title-icon.blue { background: var(--blue-50); color: var(--blue-600); }
+        .card-title-icon.green { background: var(--green-50); color: var(--green-600); }
+        .card-title-icon.purple { background: rgba(139,92,246,0.1); color: var(--purple-500); }
+        .card-title-icon.red { background: var(--red-50); color: var(--red-600); }
+        [data-theme="dark"] .card-title-icon.blue { background: rgba(59,130,246,0.15); }
+        [data-theme="dark"] .card-title-icon.green { background: rgba(34,197,94,0.15); }
+        [data-theme="dark"] .card-title-icon.purple { background: rgba(139,92,246,0.15); }
+        [data-theme="dark"] .card-title-icon.red { background: rgba(239,68,68,0.15); }
+
+        .card-title h3 {
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .card-body {
+            padding: 20px 22px;
+        }
+
+        .card-body.no-pad { padding: 0; }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+        }
+
+        .chart-container.tall { height: 380px; }
+
+        /* ====== MAP ====== */
+        .map-wrap {
+            height: 420px;
+            position: relative;
+        }
+
+        #resultMap { height: 100%; width: 100%; }
+
+        .map-info-box {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: var(--bg-card);
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            box-shadow: var(--shadow-lg);
+            z-index: 500;
+            min-width: 200px;
+        }
+
+        .map-info-box h4 {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 5px 0;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .info-row:last-child { border-bottom: none; }
+
+        .info-row .label {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .info-row .value {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        /* ====== CLICK MAP HINT ====== */
+        .map-click-hint {
+            position: absolute;
+            bottom: 12px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(30,41,59,0.85);
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-size: 13px;
+            z-index: 500;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            backdrop-filter: blur(8px);
+        }
+
+        /* ====== DEPTH ANALYSIS ====== */
+        .depth-layers {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .depth-layer {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 16px;
+            background: var(--bg-primary);
+            border-radius: var(--radius);
+            border: 1px solid var(--border-light);
+        }
+
+        .depth-layer-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .depth-layer-info {
+            flex: 1;
+        }
+
+        .depth-layer-info h4 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .depth-layer-info p {
+            font-size: 12px;
+            color: var(--text-muted);
+        }
+
+        .depth-layer-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .depth-layer-value span {
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-muted);
+        }
+
+        /* ====== RISK INDICATOR ====== */
+        .risk-meter {
+            margin-top: 16px;
+            padding: 16px;
+            background: var(--bg-primary);
+            border-radius: var(--radius);
+        }
+
+        .risk-bar-track {
+            height: 12px;
+            background: linear-gradient(90deg, #22c55e, #eab308, #ef4444);
+            border-radius: 6px;
+            position: relative;
+            margin-top: 8px;
+        }
+
+        .risk-bar-pointer {
+            position: absolute;
+            top: -4px;
+            width: 20px;
+            height: 20px;
+            background: white;
+            border: 3px solid var(--text-primary);
+            border-radius: 50%;
+            transform: translateX(-50%);
+            transition: left 1s ease;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .risk-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        /* ====== NO RESULTS ====== */
+        .no-results {
+            text-align: center;
+            padding: 60px 20px;
+        }
+
+        .no-results i {
+            font-size: 48px;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .no-results h3 {
+            font-size: 18px;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .no-results p {
+            font-size: 14px;
+            color: var(--text-muted);
+        }
+
+        /* ====== FOOTER ====== */
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-muted);
+            font-size: 13px;
+            border-top: 1px solid var(--border);
+        }
+
+        /* ====== RESPONSIVE ====== */
+        @media (max-width: 1024px) {
+            .stats-grid { grid-template-columns: repeat(2, 1fr); }
+            .grid-2, .grid-2-1 { grid-template-columns: 1fr; }
+            .water-hero-content { grid-template-columns: 1fr; }
+            .water-hero-right { min-height: 250px; }
+        }
+
+        @media (max-width: 640px) {
+            .stats-grid { grid-template-columns: 1fr; }
+            .search-section { padding: 32px 16px; }
+            .search-section h2 { font-size: 22px; }
+            .results-section { padding: 16px; }
+            .top-header { padding: 0 16px; }
+            .water-level-value { font-size: 42px; }
+            .water-meta { grid-template-columns: 1fr; }
+            .search-box { flex-direction: column; }
+            .search-btn { justify-content: center; }
+            .location-header { flex-direction: column; align-items: flex-start; }
+            .brand h1 { font-size: 16px; }
+        }
+
+        /* ====== CUSTOM MAP MARKER ANIMATION ====== */
+        @keyframes markerDrop {
+            0% { transform: translateY(-100px); opacity: 0; }
+            60% { transform: translateY(10px); opacity: 1; }
+            80% { transform: translateY(-5px); }
+            100% { transform: translateY(0); }
+        }
+
+        .leaflet-marker-icon {
+            transition: transform 0.2s;
+        }
+
+        /* ====== PULSE RING ON MAP MARKER ====== */
+        .pulse-marker {
+            position: relative;
+        }
+
+        .pulse-ring {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: 3px solid var(--blue-500);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation: pulseRing 2s ease-out infinite;
+        }
+
+        @keyframes pulseRing {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(2.5); opacity: 0; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-card">
+            <div class="spinner"></div>
+            <h3>Analyzing Location</h3>
+            <p id="loadingText">Fetching groundwater data...</p>
+        </div>
+    </div>
+
+    <!-- Header -->
+    <header class="top-header">
+        <div class="brand">
+            <div class="brand-logo"><i class="fas fa-water"></i></div>
+            <div>
+                <h1>AquaLevel</h1>
+                <span>Groundwater Intelligence Platform</span>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="icon-btn" onclick="toggleTheme()" title="Toggle Theme">
+                <i class="fas fa-moon" id="themeIcon"></i>
+            </button>
+            <button class="icon-btn" title="Settings">
+                <i class="fas fa-cog"></i>
+            </button>
+        </div>
+    </header>
+
+    <!-- Search Section -->
+    <section class="search-section">
+        <h2><i class="fas fa-search-location"></i> Find Groundwater Levels</h2>
+        <p>Search any city, village, or location worldwide to discover groundwater depth and quality</p>
+
+        <div class="search-wrapper">
+            <div class="search-box">
+                <div class="search-input-wrap">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <input
+                        type="text"
+                        class="search-input"
+                        id="citySearch"
+                        placeholder="Search city, village, or place name..."
+                        autocomplete="off"
+                        oninput="handleSearchInput(this.value)"
+                        onkeydown="if(event.key==='Enter') searchCity()"
+                    >
+                </div>
+                <button class="search-btn" id="searchBtn" onclick="searchCity()">
+                    <i class="fas fa-search"></i>
+                    <span>Search</span>
+                </button>
+            </div>
+            <div class="suggestions" id="suggestions"></div>
+        </div>
+
+        <div class="recent-searches">
+            <span>Quick search:</span>
+            <div class="recent-tag" onclick="quickSearch('Delhi, India')">Delhi</div>
+            <div class="recent-tag" onclick="quickSearch('Chennai, India')">Chennai</div>
+            <div class="recent-tag" onclick="quickSearch('London, UK')">London</div>
+            <div class="recent-tag" onclick="quickSearch('California, USA')">California</div>
+            <div class="recent-tag" onclick="quickSearch('Cairo, Egypt')">Cairo</div>
+            <div class="recent-tag" onclick="quickSearch('Tokyo, Japan')">Tokyo</div>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section class="results-section" id="resultsSection">
+        <!-- Location Header -->
+        <div class="location-header">
+            <div class="location-info">
+                <div class="location-pin"><i class="fas fa-map-marker-alt"></i></div>
+                <div class="location-details">
+                    <h2 id="locationName">-</h2>
+                    <div class="coords">
+                        <span><i class="fas fa-crosshairs"></i> <span id="locationCoords">-</span></span>
+                        <span><i class="fas fa-clock"></i> <span id="locationTime">-</span></span>
+                    </div>
+                </div>
+            </div>
+            <div class="location-actions">
+                <button class="btn" onclick="shareLocation()"><i class="fas fa-share-alt"></i> Share</button>
+                <button class="btn" onclick="downloadReport()"><i class="fas fa-download"></i> Report</button>
+                <button class="btn btn-primary" onclick="document.getElementById('citySearch').focus()">
+                    <i class="fas fa-search"></i> New Search
+                </button>
+            </div>
+        </div>
+
+        <!-- Water Level Hero -->
+        <div class="water-hero">
+            <div class="water-hero-content">
+                <div class="water-hero-left">
+                    <div class="water-level-label">Current Groundwater Depth</div>
+                    <div class="water-level-display">
+                        <div class="water-level-value" id="waterLevelValue">-</div>
+                        <div class="water-level-unit">meters bgl</div>
+                    </div>
+                    <div class="water-level-status" id="waterLevelStatus">
+                        <i class="fas fa-check-circle"></i>
+                        <span>Calculating...</span>
+                    </div>
+                    <div class="water-meta">
+                        <div class="water-meta-item">
+                            <div class="meta-label">Seasonal High</div>
+                            <div class="meta-value" id="seasonalHigh">- <span class="meta-unit">m</span></div>
+                        </div>
+                        <div class="water-meta-item">
+                            <div class="meta-label">Seasonal Low</div>
+                            <div class="meta-value" id="seasonalLow">- <span class="meta-unit">m</span></div>
+                        </div>
+                        <div class="water-meta-item">
+                            <div class="meta-label">Aquifer Type</div>
+                            <div class="meta-value" id="aquiferType" style="font-size:14px;">-</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="water-hero-right">
+                    <div class="gauge-visual-container" style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:var(--bg-primary);">
+                        <canvas id="gaugeChart" width="280" height="280"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Environmental Stats -->
+        <div class="stats-grid">
+            <div class="stat-card temp">
+                <div class="stat-top">
+                    <div class="stat-icon"><i class="fas fa-temperature-high"></i></div>
+                    <div class="stat-trend up" id="tempTrend"><i class="fas fa-arrow-up"></i> 1.2°</div>
+                </div>
+                <div class="stat-value" id="tempValue">- <span>°C</span></div>
+                <div class="stat-label">Temperature</div>
+            </div>
+            <div class="stat-card rain">
+                <div class="stat-top">
+                    <div class="stat-icon"><i class="fas fa-cloud-rain"></i></div>
+                    <div class="stat-trend down" id="rainTrend"><i class="fas fa-arrow-down"></i> 12%</div>
+                </div>
+                <div class="stat-value" id="rainValue">- <span>mm</span></div>
+                <div class="stat-label">Annual Rainfall</div>
+            </div>
+            <div class="stat-card humidity">
+                <div class="stat-top">
+                    <div class="stat-icon"><i class="fas fa-tint"></i></div>
+                    <div class="stat-trend up" id="humTrend"><i class="fas fa-arrow-up"></i> 3%</div>
+                </div>
+                <div class="stat-value" id="humValue">- <span>%</span></div>
+                <div class="stat-label">Humidity</div>
+            </div>
+            <div class="stat-card depth">
+                <div class="stat-top">
+                    <div class="stat-icon"><i class="fas fa-layer-group"></i></div>
+                    <div class="stat-trend down" id="depthTrend"><i class="fas fa-arrow-down"></i> 0.4m</div>
+                </div>
+                <div class="stat-value" id="depthChange">- <span>m/yr</span></div>
+                <div class="stat-label">Annual Depletion Rate</div>
+            </div>
+        </div>
+
+        <!-- Map + Analysis -->
+        <div class="grid-2-1">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-title-icon blue"><i class="fas fa-map-marked-alt"></i></div>
+                        <h3>Location Map</h3>
+                    </div>
+                    <button class="btn" onclick="zoomToLocation()">
+                        <i class="fas fa-crosshairs"></i> Re-center
+                    </button>
+                </div>
+                <div class="card-body no-pad">
+                    <div class="map-wrap">
+                        <div id="resultMap"></div>
+                        <div class="map-click-hint">
+                            <i class="fas fa-mouse-pointer"></i>
+                            Click anywhere on map to check groundwater level
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-title-icon purple"><i class="fas fa-layer-group"></i></div>
+                        <h3>Subsurface Analysis</h3>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="depth-layers" id="depthLayers">
+                        <!-- Filled by JS -->
+                    </div>
+                    <div class="risk-meter">
+                        <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-size:13px;font-weight:600;color:var(--text-primary);">Depletion Risk</span>
+                            <span style="font-size:13px;font-weight:700;" id="riskLabel">-</span>
+                        </div>
+                        <div class="risk-bar-track">
+                            <div class="risk-bar-pointer" id="riskPointer" style="left:50%"></div>
+                        </div>
+                        <div class="risk-labels">
+                            <span>Low Risk</span>
+                            <span>Moderate</span>
+                            <span>High Risk</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-title-icon blue"><i class="fas fa-chart-line"></i></div>
+                        <h3>Historical Groundwater Trend</h3>
+                    </div>
+                    <div style="display:flex;gap:6px;">
+                        <button class="btn" style="padding:5px 10px;font-size:12px;" onclick="updateHistoryRange('5y')" id="btn5y">5Y</button>
+                        <button class="btn btn-primary" style="padding:5px 10px;font-size:12px;" onclick="updateHistoryRange('10y')" id="btn10y">10Y</button>
+                        <button class="btn" style="padding:5px 10px;font-size:12px;" onclick="updateHistoryRange('20y')" id="btn20y">20Y</button>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container tall">
+                        <canvas id="historyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-title-icon green"><i class="fas fa-chart-bar"></i></div>
+                        <h3>Monthly Variation</h3>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container tall">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid-2">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-title-icon purple"><i class="fas fa-brain"></i></div>
+                        <h3>AI Forecast (Next 5 Years)</h3>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container tall">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-title">
+                        <div class="card-title-icon red"><i class="fas fa-cloud-rain"></i></div>
+                        <h3>Rainfall vs Recharge</h3>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="chart-container tall">
+                        <canvas id="rechargeChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <p>AquaLevel — Groundwater Intelligence Platform &copy; 2024 | Data is estimated based on geospatial models</p>
+    </footer>
+
+    <script>
+    // ====== GLOBAL STATE ======
+    let map = null;
+    let marker = null;
+    let charts = {};
+    let searchTimeout = null;
+    let currentLocation = null;
+
+    // ====== THEME ======
+    function toggleTheme() {
+        const html = document.documentElement;
+        const current = html.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', next);
+        document.getElementById('themeIcon').className = next === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        updateChartsTheme();
+    }
+
+    function updateChartsTheme() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        const textColor = isDark ? '#94a3b8' : '#5a6a7e';
+        const gridColor = isDark ? 'rgba(148,163,184,0.1)' : 'rgba(0,0,0,0.06)';
+        Object.values(charts).forEach(chart => {
+            if (!chart || !chart.options) return;
+            if (chart.options.scales) {
+                Object.values(chart.options.scales).forEach(s => {
+                    if (s.ticks) s.ticks.color = textColor;
+                    if (s.grid) s.grid.color = gridColor;
+                    if (s.title) s.title.color = textColor;
+                });
+            }
+            if (chart.options.plugins?.legend?.labels) {
+                chart.options.plugins.legend.labels.color = textColor;
+            }
+            chart.update('none');
+        });
+    }
+
+    // ====== SEARCH WITH AUTOCOMPLETE ======
+    function handleSearchInput(query) {
+        clearTimeout(searchTimeout);
+        const sugBox = document.getElementById('suggestions');
+
+        if (query.length < 2) {
+            sugBox.classList.remove('show');
+            return;
+        }
+
+        searchTimeout = setTimeout(async () => {
+            try {
+                const resp = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=6&addressdetails=1`,
+                    { headers: { 'Accept-Language': 'en' } }
+                );
+                const results = await resp.json();
+
+                if (results.length === 0) {
+                    sugBox.innerHTML = `
+                        <div class="suggestion-item" style="justify-content:center;color:#8c9bb0;cursor:default;">
+                            <i class="fas fa-search"></i> No locations found
+                        </div>`;
+                    sugBox.classList.add('show');
+                    return;
+                }
+
+                sugBox.innerHTML = results.map(r => {
+                    const type = r.type || r.class || 'place';
+                    const name = r.display_name.split(',')[0];
+                    const detail = r.display_name.split(',').slice(1, 3).join(',').trim();
+                    return `
+                        <div class="suggestion-item" onclick="selectSuggestion(${r.lat}, ${r.lon}, '${r.display_name.replace(/'/g, "\\'")}')">
+                            <i class="fas fa-map-marker-alt"></i>
+                            <div class="suggestion-text">
+                                <div class="name">${name}</div>
+                                <div class="detail">${detail}</div>
+                            </div>
+                            <span class="suggestion-type">${type}</span>
+                        </div>`;
+                }).join('');
+                sugBox.classList.add('show');
+            } catch (e) {
+                console.error('Search error:', e);
+            }
+        }, 350);
+    }
+
+    function selectSuggestion(lat, lon, name) {
+        document.getElementById('suggestions').classList.remove('show');
+        document.getElementById('citySearch').value = name.split(',')[0];
+        performSearch(lat, lon, name);
+    }
+
+    async function searchCity() {
+        const query = document.getElementById('citySearch').value.trim();
+        if (!query) return;
+
+        document.getElementById('suggestions').classList.remove('show');
+        showLoading('Geocoding location...');
+
+        try {
+            const resp = await fetch(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`,
+                { headers: { 'Accept-Language': 'en' } }
+            );
+            const results = await resp.json();
+
+            if (results.length === 0) {
+                hideLoading();
+                alert('Location not found. Please try a different search term.');
+                return;
+            }
+
+            const r = results[0];
+            performSearch(parseFloat(r.lat), parseFloat(r.lon), r.display_name);
+        } catch (e) {
+            hideLoading();
+            alert('Search failed. Please check your internet connection.');
+        }
+    }
+
+    function quickSearch(query) {
+        document.getElementById('citySearch').value = query;
+        searchCity();
+    }
+
+    // ====== MAIN SEARCH HANDLER ======
+    async function performSearch(lat, lon, displayName) {
+        showLoading('Analyzing groundwater data...');
+
+        // Simulate analysis delay for realism
+        await delay(1200);
+        updateLoadingText('Calculating water table depth...');
+        await delay(800);
+        updateLoadingText('Generating environmental report...');
+        await delay(600);
+
+        currentLocation = { lat, lon, name: displayName };
+
+        // Generate groundwater data based on location
+        const gwData = generateGroundwaterData(lat, lon);
+
+        // Update UI
+        updateLocationHeader(displayName, lat, lon);
+        updateWaterLevel(gwData);
+        updateStats(gwData);
+        updateDepthLayers(gwData);
+        updateRiskMeter(gwData);
+        initOrUpdateMap(lat, lon, gwData);
+        createCharts(gwData);
+        drawGauge(gwData);
+
+        document.getElementById('resultsSection').classList.add('show');
+        hideLoading();
+
+        // Smooth scroll to results
+        document.getElementById('resultsSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+
+    // ====== GROUNDWATER DATA GENERATOR ======
+    // Estimates based on geographic/climate patterns
+    function generateGroundwaterData(lat, lon) {
+        // Base depth influenced by latitude (arid regions = deeper)
+        const absLat = Math.abs(lat);
+        let baseDepth;
+
+        // Climate zone estimation
+        if (absLat < 10) {
+            // Tropical - shallow water table
+            baseDepth = 3 + Math.random() * 8;
+        } else if (absLat < 25) {
+            // Subtropical/Arid - can be deep
+            const aridFactor = (lon > 20 && lon < 70 && absLat > 15) ? 15 : 5; // Middle East/Sahara
+            baseDepth = 8 + Math.random() * 20 + aridFactor;
+        } else if (absLat < 40) {
+            // Temperate - moderate
+            baseDepth = 5 + Math.random() * 15;
+        } else if (absLat < 55) {
+            // Cool temperate - usually accessible
+            baseDepth = 3 + Math.random() * 12;
+        } else {
+            // Cold regions
+            baseDepth = 2 + Math.random() * 8;
+        }
+
+        // Coastal proximity (rough estimate - near coasts tend to have shallower tables)
+        const coastalFactor = Math.min(Math.abs(lon % 30) / 30, 1);
+        baseDepth *= (0.8 + coastalFactor * 0.4);
+
+        // Add some deterministic variation based on exact coordinates
+        const coordHash = Math.sin(lat * 12.345 + lon * 67.89) * 0.5 + 0.5;
+        baseDepth += coordHash * 5 - 2.5;
+
+        baseDepth = Math.max(1.5, Math.round(baseDepth * 10) / 10);
+
+        // Status
+        let status, statusClass;
+        if (baseDepth <= 10) {
+            status = 'Safe - Accessible'; statusClass = 'safe';
+        } else if (baseDepth <= 25) {
+            status = 'Moderate Depth'; statusClass = 'warning';
+        } else {
+            status = 'Deep - Critical'; statusClass = 'critical';
+        }
+
+        // Environmental params
+        const temp = Math.round(35 - absLat * 0.4 + (Math.random() - 0.5) * 8);
+        const rainfall = Math.round(Math.max(50, 2000 - absLat * 25 - baseDepth * 15 + Math.random() * 400));
+        const humidity = Math.round(Math.max(20, 90 - baseDepth * 1.2 + Math.random() * 20));
+        const depletionRate = Math.round((0.2 + Math.random() * 1.2) * 10) / 10;
+
+        // Seasonal variation
+        const seasonalHigh = Math.round((baseDepth - 1 - Math.random() * 3) * 10) / 10;
+        const seasonalLow = Math.round((baseDepth + 1 + Math.random() * 4) * 10) / 10;
+
+        // Aquifer type
+        const aquiferTypes = ['Alluvial', 'Basaltic', 'Sedimentary', 'Crystalline', 'Limestone', 'Sandstone'];
+        const aquiferIndex = Math.floor(coordHash * aquiferTypes.length);
+        const aquifer = aquiferTypes[aquiferIndex];
+
+        // Risk percentage
+        let riskPercent;
+        if (statusClass === 'safe') riskPercent = 10 + Math.random() * 25;
+        else if (statusClass === 'warning') riskPercent = 35 + Math.random() * 30;
+        else riskPercent = 65 + Math.random() * 30;
+
+        // Generate monthly depths
+        const monthlyDepths = [];
+        for (let m = 0; m < 12; m++) {
+            const seasonal = Math.sin((m - 3) * Math.PI / 6) * (baseDepth * 0.15);
+            monthlyDepths.push(Math.round((baseDepth + seasonal + (Math.random() - 0.5) * 2) * 10) / 10);
+        }
+
+        // Generate yearly history (10 years)
+        const yearlyHistory = [];
+        let histVal = baseDepth - 3;
+        for (let y = 0; y < 20; y++) {
+            histVal += depletionRate * 0.15 + (Math.random() - 0.4) * 0.5;
+            histVal = Math.max(1, histVal);
+            yearlyHistory.push(Math.round(histVal * 10) / 10);
+        }
+
+        return {
+            depth: baseDepth,
+            status,
+            statusClass,
+            temp,
+            rainfall,
+            humidity,
+            depletionRate,
+            seasonalHigh: Math.max(0.5, seasonalHigh),
+            seasonalLow,
+            aquifer,
+            riskPercent: Math.round(riskPercent),
+            monthlyDepths,
+            yearlyHistory,
+        };
+    }
+
+    // ====== UI UPDATE FUNCTIONS ======
+    function updateLocationHeader(name, lat, lon) {
+        const shortName = name.split(',').slice(0, 2).join(', ');
+        document.getElementById('locationName').textContent = shortName;
+        document.getElementById('locationCoords').textContent = `${lat.toFixed(4)}°, ${lon.toFixed(4)}°`;
+        document.getElementById('locationTime').textContent = new Date().toLocaleString();
+    }
+
+    function updateWaterLevel(data) {
+        const valueEl = document.getElementById('waterLevelValue');
+        const statusEl = document.getElementById('waterLevelStatus');
+
+        // Animate the number
+        animateValue(valueEl, 0, data.depth, 1500);
+
+        // Status
+        const statusConfig = {
+            safe: { icon: 'fa-check-circle', text: 'Safe - Accessible Water Table', class: 'status-safe' },
+            warning: { icon: 'fa-exclamation-triangle', text: 'Moderate - Declining Trend', class: 'status-warning' },
+            critical: { icon: 'fa-exclamation-circle', text: 'Critical - Deep Water Table', class: 'status-critical' }
+        };
+
+        const cfg = statusConfig[data.statusClass];
+        statusEl.className = `water-level-status ${cfg.class}`;
+        statusEl.innerHTML = `<i class="fas ${cfg.icon}"></i><span>${cfg.text}</span>`;
+
+        // Color the value
+        const colors = { safe: '#16a34a', warning: '#d97706', critical: '#dc2626' };
+        valueEl.style.color = colors[data.statusClass];
+
+        // Meta
+        document.getElementById('seasonalHigh').innerHTML = `${data.seasonalHigh} <span class="meta-unit">m</span>`;
+        document.getElementById('seasonalLow').innerHTML = `${data.seasonalLow} <span class="meta-unit">m</span>`;
+        document.getElementById('aquiferType').textContent = data.aquifer;
+    }
+
+    function animateValue(el, start, end, duration) {
+        let startTime = null;
+        function update(timestamp) {
+            if (!startTime) startTime = timestamp;
+            const progress = Math.min((timestamp - startTime) / duration, 1);
+            const eased = 1 - Math.pow(1 - progress, 3);
+            const current = (start + (end - start) * eased).toFixed(1);
+            el.textContent = current;
+            if (progress < 1) requestAnimationFrame(update);
+        }
+        requestAnimationFrame(update);
+    }
+
+    function updateStats(data) {
+        document.getElementById('tempValue').innerHTML = `${data.temp} <span>°C</span>`;
+        document.getElementById('rainValue').innerHTML = `${data.rainfall} <span>mm</span>`;
+        document.getElementById('humValue').innerHTML = `${data.humidity} <span>%</span>`;
+        document.getElementById('depthChange').innerHTML = `${data.depletionRate} <span>m/yr</span>`;
+    }
+
+    function updateDepthLayers(data) {
+        const container = document.getElementById('depthLayers');
+        const layers = [
+            {
+                icon: 'fa-seedling', color: '#22c55e', bg: 'rgba(34,197,94,0.1)',
+                name: 'Topsoil Layer', desc: 'Surface to 2m depth',
+                value: '0-2', unit: 'm'
+            },
+            {
+                icon: 'fa-mountain', color: '#f97316', bg: 'rgba(249,115,22,0.1)',
+                name: 'Vadose Zone', desc: 'Unsaturated zone above water table',
+                value: `2-${Math.round(data.depth)}`, unit: 'm'
+            },
+            {
+                icon: 'fa-water', color: '#3b82f6', bg: 'rgba(59,130,246,0.1)',
+                name: 'Water Table', desc: `${data.aquifer} aquifer`,
+                value: data.depth, unit: 'm bgl'
+            },
+            {
+                icon: 'fa-gem', color: '#8b5cf6', bg: 'rgba(139,92,246,0.1)',
+                name: 'Deep Aquifer', desc: 'Confined groundwater zone',
+                value: `${Math.round(data.depth * 2.5)}+`, unit: 'm'
+            }
+        ];
+
+        container.innerHTML = layers.map(l => `
+            <div class="depth-layer">
+                <div class="depth-layer-icon" style="background:${l.bg};color:${l.color}">
+                    <i class="fas ${l.icon}"></i>
+                </div>
+                <div class="depth-layer-info">
+                    <h4>${l.name}</h4>
+                    <p>${l.desc}</p>
+                </div>
+                <div class="depth-layer-value">${l.value} <span>${l.unit}</span></div>
+            </div>
+        `).join('');
+    }
+
+    function updateRiskMeter(data) {
+        document.getElementById('riskPointer').style.left = `${data.riskPercent}%`;
+        const label = document.getElementById('riskLabel');
+        if (data.riskPercent < 35) {
+            label.textContent = 'Low';
+            label.style.color = '#22c55e';
+        } else if (data.riskPercent < 65) {
+            label.textContent = 'Moderate';
+            label.style.color = '#eab308';
+        } else {
+            label.textContent = 'High';
+            label.style.color = '#ef4444';
+        }
+    }
+
+    // ====== GAUGE CHART ======
+    function drawGauge(data) {
+        if (charts.gauge) charts.gauge.destroy();
+        const ctx = document.getElementById('gaugeChart');
+        const maxDepth = 40;
+        const percentage = Math.min(data.depth / maxDepth * 100, 100);
+        const remaining = 100 - percentage;
+
+        const colors = {
+            safe: ['#22c55e', '#dcfce7'],
+            warning: ['#eab308', '#fef3c7'],
+            critical: ['#ef4444', '#fee2e2']
+        };
+
+        const [mainColor, bgColor] = colors[data.statusClass];
+
+        charts.gauge = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Depth', 'Remaining'],
+                datasets: [{
+                    data: [percentage, remaining],
+                    backgroundColor: [mainColor, bgColor],
+                    borderWidth: 0,
+                    circumference: 270,
+                    rotation: 225,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '75%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false },
+                },
+            },
+            plugins: [{
+                id: 'gaugeText',
+                afterDraw: (chart) => {
+                    const { ctx, width, height } = chart;
+                    ctx.save();
+                    ctx.textAlign = 'center';
+
+                    ctx.font = 'bold 36px Segoe UI';
+                    ctx.fillStyle = mainColor;
+                    ctx.fillText(`${data.depth}`, width / 2, height / 2 + 5);
+
+                    ctx.font = '14px Segoe UI';
+                    ctx.fillStyle = '#8c9bb0';
+                    ctx.fillText('meters bgl', width / 2, height / 2 + 28);
+
+                    ctx.font = 'bold 12px Segoe UI';
+                    ctx.fillStyle = '#8c9bb0';
+                    ctx.fillText('0m', width * 0.18, height * 0.78);
+                    ctx.fillText(`${maxDepth}m`, width * 0.82, height * 0.78);
+
+                    ctx.restore();
+                }
+            }]
+        });
+    }
+
+    // ====== MAP ======
+    function initOrUpdateMap(lat, lon, data) {
+        if (!map) {
+            map = L.map('resultMap').setView([lat, lon], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; <a href="https://carto.com/">CARTO</a>',
+                maxZoom: 19,
+            }).addTo(map);
+
+            // Click on map to check other locations
+            map.on('click', function(e) {
+                const clickedLat = e.latlng.lat;
+                const clickedLon = e.latlng.lng;
+                handleMapClick(clickedLat, clickedLon);
+            });
+        } else {
+            map.setView([lat, lon], 13);
+        }
+
+        // Remove old marker
+        if (marker) map.removeLayer(marker);
+
+        // Custom marker
+        const markerColor = { safe: '#22c55e', warning: '#eab308', critical: '#ef4444' };
+        const color = markerColor[data.statusClass];
+
+        const customIcon = L.divIcon({
+            className: '',
+            html: `
+                <div style="position:relative;width:48px;height:48px;">
+                    <div style="position:absolute;width:48px;height:48px;border-radius:50%;background:${color}33;animation:pulseRing 2s ease-out infinite;"></div>
+                    <div style="position:absolute;top:8px;left:8px;width:32px;height:32px;background:${color};border-radius:50%;border:4px solid white;box-shadow:0 3px 12px rgba(0,0,0,0.3);display:flex;align-items:center;justify-content:center;">
+                        <i class="fas fa-tint" style="color:white;font-size:14px;"></i>
+                    </div>
+                </div>`,
+            iconSize: [48, 48],
+            iconAnchor: [24, 24],
+            popupAnchor: [0, -24],
+        });
+
+        marker = L.marker([lat, lon], { icon: customIcon }).addTo(map);
+        marker.bindPopup(`
+            <div style="font-family:Segoe UI,sans-serif;padding:4px;">
+                <h4 style="font-size:14px;font-weight:700;margin-bottom:6px;color:#1a2332;">
+                    <i class="fas fa-water" style="color:${color};margin-right:4px;"></i>
+                    Groundwater Level
+                </h4>
+                <p style="font-size:24px;font-weight:800;color:${color};margin:4px 0;">${data.depth}m</p>
+                <p style="font-size:12px;color:#5a6a7e;margin:2px 0;">
+                    Status: <strong style="color:${color}">${data.status}</strong>
+                </p>
+                <p style="font-size:12px;color:#5a6a7e;margin:2px 0;">
+                    Aquifer: <strong>${data.aquifer}</strong>
+                </p>
+                <p style="font-size:11px;color:#8c9bb0;margin-top:6px;">
+                    ${lat.toFixed(4)}°, ${lon.toFixed(4)}°
+                </p>
+            </div>
+        `).openPopup();
+
+        setTimeout(() => map.invalidateSize(), 300);
+    }
+
+    async function handleMapClick(lat, lon) {
+        showLoading('Checking this location...');
+        await delay(800);
+
+        // Reverse geocode
+        try {
+            const resp = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10`,
+                { headers: { 'Accept-Language': 'en' } }
+            );
+            const result = await resp.json();
+            const name = result.display_name || `${lat.toFixed(4)}, ${lon.toFixed(4)}`;
+
+            currentLocation = { lat, lon, name };
+            const gwData = generateGroundwaterData(lat, lon);
+
+            updateLocationHeader(name, lat, lon);
+            updateWaterLevel(gwData);
+            updateStats(gwData);
+            updateDepthLayers(gwData);
+            updateRiskMeter(gwData);
+            initOrUpdateMap(lat, lon, gwData);
+            createCharts(gwData);
+            drawGauge(gwData);
+
+            hideLoading();
+        } catch (e) {
+            hideLoading();
+            console.error(e);
+        }
+    }
+
+    function zoomToLocation() {
+        if (map && currentLocation) {
+            map.setView([currentLocation.lat, currentLocation.lon], 13);
+        }
+    }
+
+    // ====== CHARTS ======
+    function getChartColors() {
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        return {
+            text: isDark ? '#94a3b8' : '#5a6a7e',
+            grid: isDark ? 'rgba(148,163,184,0.08)' : 'rgba(0,0,0,0.05)',
+        };
+    }
+
+    function createCharts(data) {
+        const c = getChartColors();
+
+        // Destroy existing
+        Object.keys(charts).forEach(k => {
+            if (k !== 'gauge' && charts[k]) { charts[k].destroy(); delete charts[k]; }
+        });
+
+        // History Chart
+        const histCtx = document.getElementById('historyChart');
+        const years = Array.from({length: 20}, (_, i) => 2005 + i);
+        charts.history = new Chart(histCtx, {
+            type: 'line',
+            data: {
+                labels: years,
+                datasets: [
+                    {
+                        label: 'Groundwater Depth (m)',
+                        data: data.yearlyHistory,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59,130,246,0.1)',
+                        borderWidth: 2.5,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 3,
+                        pointBackgroundColor: '#3b82f6',
+                        pointHoverRadius: 6,
+                    },
+                    {
+                        label: 'Critical Threshold',
+                        data: Array(20).fill(25),
+                        borderColor: '#ef444480',
+                        borderWidth: 1.5,
+                        borderDash: [8, 4],
+                        pointRadius: 0,
+                        fill: false,
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { labels: { color: c.text, font: { size: 12 }, usePointStyle: true, padding: 16 } },
+                    tooltip: {
+                        backgroundColor: '#fff', titleColor: '#1a2332', bodyColor: '#5a6a7e',
+                        borderColor: '#e2e8f0', borderWidth: 1, padding: 12, cornerRadius: 8,
+                        callbacks: { label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y}m` }
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: c.text, font: { size: 11 } }, grid: { color: c.grid } },
+                    y: {
+                        reverse: true,
+                        ticks: { color: c.text, font: { size: 11 } },
+                        grid: { color: c.grid },
+                        title: { display: true, text: 'Depth (m bgl)', color: c.text, font: { size: 12 } }
+                    }
+                }
+            }
+        });
+
+        // Monthly Chart
+        const monthCtx = document.getElementById('monthlyChart');
+        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        const monthColors = data.monthlyDepths.map(d => d > 25 ? '#ef4444' : d > 10 ? '#eab308' : '#22c55e');
+
+        charts.monthly = new Chart(monthCtx, {
+            type: 'bar',
+            data: {
+                labels: months,
+                datasets: [{
+                    label: 'Depth (m)',
+                    data: data.monthlyDepths,
+                    backgroundColor: monthColors.map(c => c + 'cc'),
+                    borderColor: monthColors,
+                    borderWidth: 1,
+                    borderRadius: 6,
+                    borderSkipped: false,
+                }]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false },
+                    tooltip: {
+                        backgroundColor: '#fff', titleColor: '#1a2332', bodyColor: '#5a6a7e',
+                        borderColor: '#e2e8f0', borderWidth: 1, padding: 12, cornerRadius: 8,
+                    }
+                },
+                scales: {
+                    x: { ticks: { color: c.text, font: { size: 11 } }, grid: { display: false } },
+                    y: {
+                        reverse: true, beginAtZero: true,
+                        ticks: { color: c.text, font: { size: 11 } }, grid: { color: c.grid },
+                        title: { display: true, text: 'Depth (m)', color: c.text, font: { size: 12 } }
+                    }
+                }
+            }
+        });
+
+        // Forecast Chart
+        const fcCtx = document.getElementById('forecastChart');
+        const currentYear = new Date().getFullYear();
+        const forecastYears = Array.from({length: 6}, (_, i) => currentYear + i);
+        const forecastData = [data.depth];
+        for (let i = 1; i < 6; i++) {
+            forecastData.push(Math.round((forecastData[i-1] + data.depletionRate * (0.6 + Math.random() * 0.8)) * 10) / 10);
+        }
+        const upperCI = forecastData.map((v, i) => Math.round((v + i * 0.8) * 10) / 10);
+        const lowerCI = forecastData.map((v, i) => Math.round((v - i * 0.6) * 10) / 10);
+
+        charts.forecast = new Chart(fcCtx, {
+            type: 'line',
+            data: {
+                labels: forecastYears,
+                datasets: [
+                    {
+                        label: 'Predicted Depth',
+                        data: forecastData,
+                        borderColor: '#f97316',
+                        backgroundColor: 'rgba(249,115,22,0.1)',
+                        borderWidth: 3,
+                        fill: false,
+                        tension: 0.3,
+                        pointRadius: 5,
+                        pointBackgroundColor: '#f97316',
+                        pointBorderColor: '#fff',
+                        pointBorderWidth: 2,
+                    },
+                    {
+                        label: 'Upper Bound',
+                        data: upperCI,
+                        borderColor: 'rgba(249,115,22,0.2)',
+                        backgroundColor: 'rgba(249,115,22,0.08)',
+                        borderWidth: 1,
+                        borderDash: [4, 4],
+                        fill: '+1',
+                        tension: 0.3,
+                        pointRadius: 0,
+                    },
+                    {
+                        label: 'Lower Bound',
+                        data: lowerCI,
+                        borderColor: 'rgba(249,115,22,0.2)',
+                        borderWidth: 1,
+                        borderDash: [4, 4],
+                        tension: 0.3,
+                        pointRadius: 0,
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                interaction: { intersect: false, mode: 'index' },
+                plugins: {
+                    legend: { labels: { color: c.text, font: { size: 12 }, usePointStyle: true, padding: 16 } },
+                },
+                scales: {
+                    x: { ticks: { color: c.text }, grid: { color: c.grid } },
+                    y: {
+                        reverse: true,
+                        ticks: { color: c.text }, grid: { color: c.grid },
+                        title: { display: true, text: 'Depth (m)', color: c.text, font: { size: 12 } }
+                    }
+                }
+            }
+        });
+
+        // Recharge Chart
+        const rcCtx = document.getElementById('rechargeChart');
+        const rechargeMonths = months;
+        const rainfallData = data.monthlyDepths.map(() => Math.round(data.rainfall / 12 * (0.5 + Math.random())));
+        const rechargeData = rainfallData.map(r => Math.round(r * (0.15 + Math.random() * 0.25)));
+
+        charts.recharge = new Chart(rcCtx, {
+            type: 'bar',
+            data: {
+                labels: rechargeMonths,
+                datasets: [
+                    {
+                        label: 'Rainfall (mm)',
+                        data: rainfallData,
+                        backgroundColor: 'rgba(59,130,246,0.7)',
+                        borderRadius: 4,
+                        order: 2,
+                    },
+                    {
+                        label: 'Estimated Recharge (mm)',
+                        data: rechargeData,
+                        backgroundColor: 'rgba(34,197,94,0.7)',
+                        borderRadius: 4,
+                        order: 1,
+                    }
+                ]
+            },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                plugins: {
+                    legend: { labels: { color: c.text, font: { size: 12 }, usePointStyle: true, padding: 16 } },
+                },
+                scales: {
+                    x: { ticks: { color: c.text }, grid: { display: false } },
+                    y: {
+                        ticks: { color: c.text }, grid: { color: c.grid },
+                        title: { display: true, text: 'mm', color: c.text, font: { size: 12 } }
+                    }
+                }
+            }
+        });
+    }
+
+    // ====== LOADING ======
+    function showLoading(text) {
+        document.getElementById('loadingText').textContent = text || 'Loading...';
+        document.getElementById('loadingOverlay').classList.add('show');
+    }
+
+    function updateLoadingText(text) {
+        document.getElementById('loadingText').textContent = text;
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingOverlay').classList.remove('show');
+    }
+
+    function delay(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // ====== UTILITY FUNCTIONS ======
+    function shareLocation() {
+        if (!currentLocation) return;
+        const url = `${window.location.origin}${window.location.pathname}?lat=${currentLocation.lat}&lon=${currentLocation.lon}`;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(url);
+            alert('Location link copied to clipboard!');
+        }
+    }
+
+    function downloadReport() {
+        alert('Report download feature — In production, this would generate a PDF report with all groundwater analysis data.');
+    }
+
+    function updateHistoryRange(range) {
+        document.querySelectorAll('[id^="btn"]').forEach(b => {
+            b.className = 'btn';
+            b.style.cssText = 'padding:5px 10px;font-size:12px;';
+        });
+        const btn = document.getElementById(`btn${range}`);
+        btn.className = 'btn btn-primary';
+        btn.style.cssText = 'padding:5px 10px;font-size:12px;';
+        // In production, this would reload chart with different year ranges
+    }
+
+    // ====== CLOSE SUGGESTIONS ON OUTSIDE CLICK ======
+    document.addEventListener('click', (e) => {
+        const wrapper = document.querySelector('.search-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            document.getElementById('suggestions').classList.remove('show');
+        }
+    });
+
+    // ====== CHECK URL PARAMS ON LOAD ======
+    window.addEventListener('DOMContentLoaded', () => {
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('lat') && params.has('lon')) {
+            const lat = parseFloat(params.get('lat'));
+            const lon = parseFloat(params.get('lon'));
+            if (!isNaN(lat) && !isNaN(lon)) {
+                performSearch(lat, lon, `${lat.toFixed(4)}, ${lon.toFixed(4)}`);
+            }
+        }
+    });
+    </script>
+</body>
+</html>
